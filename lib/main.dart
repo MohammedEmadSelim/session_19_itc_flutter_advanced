@@ -1,7 +1,8 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:http/http.dart' as http;
+import 'package:session_19_itc_flutter_advanced/cubit/home_cubit.dart';
+import 'package:session_19_itc_flutter_advanced/models/product_model.dart';
 
 void main() async {
   // 1- fetching data  - send data
@@ -9,26 +10,24 @@ void main() async {
 
   // http - dio ---> packages pub dev
   /// fetch data
-  // var url= Uri.parse("https://dummyjson.com/products/9");
-  // var data = await http.get(url);
+  var url = Uri.parse("https://dummyjson.com/products/9");
+  var data = await http.get(url);
+
   /// send data  ----> post
-  var url = Uri.parse("https://dummyjson.com/products/1");
+  // var url = Uri.parse("https://dummyjson.com/products/1");
   /// post
   // var data = await http.pos(
   //   url,
   //   body: jsonEncode({"title": "keyboard logitech", "price": 750}),
   // );
   /// put
-  var data = await http.put(
-    url,
-    body: jsonEncode({"title": "keyboard logitech", "price": 750}),
-  );
-
+  // var data = await http.put(
+  //   url,
+  //   body: jsonEncode({"title": "keyboard logitech", "price": 750}),
+  // );
 
   /// delete
   // var data = await http.delete(url);
-
-
 
   print(data.body);
 
@@ -46,7 +45,10 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: BlocProvider(
+        create: (context) => HomeCubit(),
+        child: MyHomePage(title: 'Flutter Demo Home Page'),
+      ),
     );
   }
 }
@@ -61,12 +63,11 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
 
-  void _incrementCounter() {
-    setState(() {
-      _counter++;
-    });
+  @override
+  void initState() {
+    context.read<HomeCubit>().getProducts();
+    super.initState();
   }
 
   @override
@@ -76,20 +77,59 @@ class _MyHomePageState extends State<MyHomePage> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.title),
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
-        ),
+      body: BlocBuilder<HomeCubit, HomeState>(
+        builder: (context, state) {
+          if (state is HomeGetProductsLoading) {
+            return Center(child: CircularProgressIndicator());
+          }
+          if (state is HomeGetProductsFailure) {
+            return Center(
+              child: Text(state.message, style: TextStyle(color: Colors.red)),
+            );
+          }
+          var products = state is HomeGetProductsSuccess ? state.products :<Product> [];
+
+          return ListView.separated(
+            separatorBuilder: (context, index) => SizedBox(height: 12),
+            padding: EdgeInsets.symmetric(horizontal: 21, vertical: 12),
+            itemCount: products.length,
+            itemBuilder: (context, index) {
+
+              var product = products[index] ;
+              return Container(
+              width: 320,
+              height: 400,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    spreadRadius: 4,
+                    blurRadius: 2.1,
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    product.title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black,
+                    ),
+                  ),
+                  Expanded(child: Image.network(product.images.first)),
+                ],
+              ),
+            );
+            },
+          );
+        },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
+        onPressed: (){},
         tooltip: 'Increment',
         child: const Icon(Icons.add),
       ),
